@@ -6,6 +6,7 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk import bigrams, trigrams
+import re
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -26,8 +27,10 @@ def load_json(file_path):
         return json.load(f)
 
 def clean_and_tokenize(text):
-    tokens = word_tokenize(text.lower())
-    return [lemmatizer.lemmatize(token) for token in tokens if token.isalpha() and token not in stop_words]
+    tokens = re.findall(r"\w+[\w'-]*[.,!?;]?", text.lower())
+    return ['__START__'] + [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words] + ['__END__']
+
+
 
 def process_chat_data(file_name):
     print(f"Processing chat file: {file_name}")
@@ -66,7 +69,7 @@ def get_top_users():
     top_10_users = dict(Counter(token_counts).most_common(10))
     return top_10_users
 
-def generate_ngrams(user_id, n=2):
+def generate_ngrams(user_id, n=3):
     user_data = load_json(os.path.join(PROCESSED_DATA_DIR, f"{user_id}_processed.json"))
 
     all_tokens = []
@@ -81,6 +84,7 @@ def generate_ngrams(user_id, n=2):
         raise ValueError("n should be 2 or 3 for bigrams or trigrams")
 
     return ngrams_list
+
 
 def calculate_message_length_statistics(user_id):
     """Calculate message length statistics (average, min, max) for a user."""

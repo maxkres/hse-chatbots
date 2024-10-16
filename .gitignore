@@ -2,3 +2,6 @@
 data/
 clustering_result_user726029390.txt
 message_length_matrix.txt
+user_id_patterns.txt
+.env
+user_id_patterns.txt

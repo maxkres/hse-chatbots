@@ -27,32 +27,37 @@ def build_transition_table(ngrams):
     
     return probabilities
 
-def generate_text(transition_table, num_words=20):
-    prefix = random.choice(list(transition_table.keys()))
-    generated_words = list(prefix)
+def generate_text(transition_table, max_words=20):
+    prefix = ('__START__',)
+    generated_words = []
 
-    for _ in range(num_words - len(prefix)):
+    while len(generated_words) < max_words:
         next_word_candidates = transition_table.get(prefix, None)
         if not next_word_candidates:
             break
 
         next_word = random.choices(list(next_word_candidates.keys()), weights=next_word_candidates.values())[0]
+
+        if next_word == '__END__':
+            break
+
         generated_words.append(next_word)
         prefix = tuple(generated_words[-len(prefix):])
-    
+
     return " ".join(generated_words)
 
 if __name__ == "__main__":
     top_users = ['user6060256091', 'user1948911068', 'user5564229156', 'user1485427289', 
                  'user629116733', 'user463594918', 'user971032879', 'user726029390', 
                  'user625210535', 'user384879817']
-    user_id = top_users[7]
+    user_id = top_users[0]
 
     print(f"Building custom Markov chain for user {user_id}...")
 
     ngrams = load_ngrams(user_id, ngram_type="bigrams")
     transition_table = build_transition_table(ngrams)
-    generated_text = generate_text(transition_table, num_words=20)
+
+    generated_text = generate_text(transition_table, max_words=20)
 
     print("Generated text:")
     print(generated_text)
