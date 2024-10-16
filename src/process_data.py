@@ -1,11 +1,10 @@
 import json
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from collections import Counter
 from nltk import bigrams, trigrams
 
 nltk.download('punkt')
@@ -19,6 +18,8 @@ RAW_DATA_DIR = "data/raw/"
 PROCESSED_DATA_DIR = "data/processed/"
 MARKOV_DATA_DIR = "data/markov/"
 os.makedirs(MARKOV_DATA_DIR, exist_ok=True)
+
+PATTERN_OUTPUT_FILE = "user_id_patterns.txt"
 
 def load_json(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -81,20 +82,45 @@ def generate_ngrams(user_id, n=2):
 
     return ngrams_list
 
+def calculate_message_length_statistics(user_id):
+    """Calculate message length statistics (average, min, max) for a user."""
+    user_data = load_json(os.path.join(PROCESSED_DATA_DIR, f"{user_id}_processed.json"))
+    
+    message_lengths = [len(message) for message in user_data]
+    if not message_lengths:
+        return 0, 0, 0
+
+    avg_length = sum(message_lengths) / len(message_lengths)
+    min_length = min(message_lengths)
+    max_length = max(message_lengths)
+
+    return avg_length, min_length, max_length
+
 def save_ngrams_for_users(top_users):
-    for user_id in top_users:
-        print(f"Generating n-grams for user: {user_id}")
+    with open(PATTERN_OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
+        for user_id in top_users:
+            print(f"Generating n-grams and patterns for user: {user_id}")
 
-        bigrams_data = generate_ngrams(user_id, n=2)
-        trigrams_data = generate_ngrams(user_id, n=3)
+            bigrams_data = generate_ngrams(user_id, n=2)
+            trigrams_data = generate_ngrams(user_id, n=3)
 
-        bigram_file = os.path.join(MARKOV_DATA_DIR, f"{user_id}_bigrams.json")
-        with open(bigram_file, 'w', encoding='utf-8') as f:
-            json.dump(bigrams_data, f, indent=4, ensure_ascii=False)
+            avg_length, min_length, max_length = calculate_message_length_statistics(user_id)
 
-        trigram_file = os.path.join(MARKOV_DATA_DIR, f"{user_id}_trigrams.json")
-        with open(trigram_file, 'w', encoding='utf-8') as f:
-            json.dump(trigrams_data, f, indent=4, ensure_ascii=False)
+            output_file.write(f"User ID: {user_id}\n")
+            output_file.write(f"Average message length: {avg_length}\n")
+            output_file.write(f"Min message length: {min_length}\n")
+            output_file.write(f"Max message length: {max_length}\n")
+            output_file.write(f"Number of bigrams: {len(bigrams_data)}\n")
+            output_file.write(f"Number of trigrams: {len(trigrams_data)}\n")
+            output_file.write("\n")
+
+            bigram_file = os.path.join(MARKOV_DATA_DIR, f"{user_id}_bigrams.json")
+            with open(bigram_file, 'w', encoding='utf-8') as f:
+                json.dump(bigrams_data, f, indent=4, ensure_ascii=False)
+
+            trigram_file = os.path.join(MARKOV_DATA_DIR, f"{user_id}_trigrams.json")
+            with open(trigram_file, 'w', encoding='utf-8') as f:
+                json.dump(trigrams_data, f, indent=4, ensure_ascii=False)
 
 if __name__ == "__main__":
     process_all_chats()

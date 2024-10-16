@@ -1,0 +1,70 @@
+User ID: user6060256091
+Average message length: 6.777976545418406
+Min message length: 0
+Max message length: 187
+Number of bigrams: 34099
+Number of trigrams: 34098
+
+User ID: user1948911068
+Average message length: 8.249682337992375
+Min message length: 0
+Max message length: 180
+Number of bigrams: 25969
+Number of trigrams: 25968
+
+User ID: user5564229156
+Average message length: 4.568669915177765
+Min message length: 0
+Max message length: 104
+Number of bigrams: 25314
+Number of trigrams: 25313
+
+User ID: user1485427289
+Average message length: 4.881841432225064
+Min message length: 0
+Max message length: 41
+Number of bigrams: 19087
+Number of trigrams: 19086
+
+User ID: user629116733
+Average message length: 10.1288056206089
+Min message length: 0
+Max message length: 179
+Number of bigrams: 17299
+Number of trigrams: 17298
+
+User ID: user463594918
+Average message length: 5.319713993871297
+Min message length: 0
+Max message length: 431
+Number of bigrams: 10415
+Number of trigrams: 10414
+
+User ID: user971032879
+Average message length: 2.8804591265397534
+Min message length: 0
+Max message length: 251
+Number of bigrams: 10288
+Number of trigrams: 10287
+
+User ID: user726029390
+Average message length: 5.498542274052478
+Min message length: 0
+Max message length: 431
+Number of bigrams: 7543
+Number of trigrams: 7542
+
+User ID: user625210535
+Average message length: 4.374483165977555
+Min message length: 0
+Max message length: 124
+Number of bigrams: 7405
+Number of trigrams: 7404
+
+User ID: user384879817
+Average message length: 3.559036144578313
+Min message length: 0
+Max message length: 66
+Number of bigrams: 5907
+Number of trigrams: 5906
+
