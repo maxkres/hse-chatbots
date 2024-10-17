@@ -53,7 +53,7 @@ def generate_text_with_valid_keyword(transition_table, keywords, valid_starting_
         keyword = random.choice(starting_keywords)
         prefix_candidates = [prefix for prefix in transition_table.keys() if keyword in prefix]
     else:
-        prefix_candidates = [("__START__",)]
+        prefix_candidates = list(transition_table.keys())
 
     prefix = random.choice(prefix_candidates)
     generated_words = list(prefix)
@@ -71,7 +71,7 @@ def generate_text_with_valid_keyword(transition_table, keywords, valid_starting_
         generated_words.append(next_word)
         prefix = tuple(generated_words[-len(prefix):])
 
-    return " ".join(generated_words)
+    return " ".join(generated_words).capitalize()
 
 async def store_and_print_messages(message, message_history):
     message_history.append(message.text)

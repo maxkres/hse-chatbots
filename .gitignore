@@ -7,3 +7,7 @@ user_id_patterns.txt
 user_id_patterns.txt
 bot_configs.txt
 src/__pycache__/generate_markov_chain.cpython-313.pyc
+message_clusters_output.txt
+cluster_length_probabilities.txt
+time_preferences_output.txt
+transition_table_output.txt
