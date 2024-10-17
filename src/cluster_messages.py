@@ -3,12 +3,13 @@ import os
 from datetime import datetime, timedelta
 
 RAW_DATA_DIR = "data/raw/"
-OUTPUT_CLUSTER_FILE = "message_clusters_output.txt"
-OUTPUT_PROBABILITY_FILE = "cluster_length_probabilities.txt"
+OUTPUT_DIR = "data/"
+OUTPUT_PROBABILITY_FILE = os.path.join(OUTPUT_DIR, "cluster_data.json")
+OUTPUT_CLUSTERED_MESSAGES_FILE = os.path.join(OUTPUT_DIR, "clustered_messages.json")
 CLUSTER_TIME_GAP = timedelta(minutes=15)
 MAX_CLUSTER_SIZE = 250
 REDISTRIBUTION_STEP = 0.0001
-MAX_CLUSTER_DELAY_SECONDS = 86400  # Cap cluster delays at 24 hours (86400 seconds)
+MAX_CLUSTER_DELAY_SECONDS = 86400
 
 def load_raw_data(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -20,21 +21,46 @@ def process_messages(raw_data):
         if "date" in message and "text" in message:
             timestamp = datetime.strptime(message["date"], '%Y-%m-%dT%H:%M:%S')
             text = message["text"]
-            messages.append((timestamp, text))
+            messages.append((timestamp, message))
     return sorted(messages, key=lambda x: x[0])
 
 def cluster_messages(messages):
     clusters = []
-    current_cluster = [messages[0]]
+    current_cluster = [messages[0][1]]
     for i in range(1, len(messages)):
         if messages[i][0] - messages[i - 1][0] > CLUSTER_TIME_GAP:
             clusters.append(current_cluster)
-            current_cluster = [messages[i]]
+            current_cluster = [messages[i][1]]
         else:
-            current_cluster.append(messages[i])
+            current_cluster.append(messages[i][1])
     if current_cluster:
         clusters.append(current_cluster)
     return clusters
+
+def save_clustered_messages_to_json(clusters, output_file):
+    clustered_data = {
+        "clusters": []
+    }
+    cluster_id = 1
+    
+    for cluster in clusters:
+        clustered_messages = []
+        for message in cluster:
+            message_data = {
+                "id": message["id"],
+                "cluster_id": cluster_id,
+                **{key: message[key] for key in message if key != "id" and key != "cluster_id"}
+            }
+            clustered_messages.append(message_data)
+        
+        clustered_data["clusters"].append({
+            "cluster_id": cluster_id,
+            "messages": clustered_messages
+        })
+        cluster_id += 1
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(clustered_data, f, ensure_ascii=False, indent=1)
 
 def calculate_cluster_length_probabilities(clusters):
     cluster_lengths = [min(len(cluster), MAX_CLUSTER_SIZE) for cluster in clusters]
@@ -49,7 +75,7 @@ def calculate_cluster_length_probabilities(clusters):
         if len(cluster) > 1:
             total_delay = 0
             for i in range(1, len(cluster)):
-                delay = (cluster[i][0] - cluster[i - 1][0]).total_seconds()
+                delay = (datetime.strptime(cluster[i]["date"], '%Y-%m-%dT%H:%M:%S') - datetime.strptime(cluster[i - 1]["date"], '%Y-%m-%dT%H:%M:%S')).total_seconds()
                 total_delay += delay
             avg_delay = total_delay / (len(cluster) - 1)
             length_delays[cluster_length].append(avg_delay)
@@ -108,11 +134,10 @@ def calculate_average_cluster_delay(clusters):
     cluster_delays = {i: [] for i in range(1, MAX_CLUSTER_SIZE + 1)}
     for i in range(1, len(clusters)):
         current_cluster_length = min(len(clusters[i]), MAX_CLUSTER_SIZE)
-        delay_between_clusters = (clusters[i][0][0] - clusters[i-1][-1][0]).total_seconds()
-        delay_between_clusters = min(delay_between_clusters, MAX_CLUSTER_DELAY_SECONDS)  # Cap large delays
+        delay_between_clusters = (datetime.strptime(clusters[i][0]["date"], '%Y-%m-%dT%H:%M:%S') - datetime.strptime(clusters[i-1][-1]["date"], '%Y-%m-%dT%H:%M:%S')).total_seconds()
+        delay_between_clusters = min(delay_between_clusters, MAX_CLUSTER_DELAY_SECONDS)
         cluster_delays[current_cluster_length].append(delay_between_clusters)
     return {length: calculate_average_delay(delays) for length, delays in cluster_delays.items()}
-
 
 def assign_custom_zeros_cluster(cluster_delays, global_avg_cluster_delay):
     divisor = 5
@@ -137,46 +162,47 @@ def smooth_inconsistent_cluster_delays(cluster_delays):
             smoothed_cluster_delay = (prev_cluster_delay + next_cluster_delay) / 2
             cluster_delays[current_length] = smoothed_cluster_delay
 
-def save_clusters_to_file(clusters, output_file):
-    with open(output_file, 'w', encoding='utf-8') as f:
-        for cluster in clusters:
-            for message_time, message_text in cluster:
-                f.write(f"{message_time} - {message_text}\n")
-            f.write("---------\n")
-
 def save_probabilities_to_file(probabilities, delays, cluster_avg_delays, global_average_delay, output_file):
-    total_sum = sum(probabilities.values())
-    recalculated_avg_delay = []
+    message_cluster_data = []
+    for length in range(1, MAX_CLUSTER_SIZE + 1):
+        probability = probabilities.get(length, 0)
+        avg_message_delay = calculate_average_delay(delays[length])
+        avg_cluster_delay = cluster_avg_delays.get(length, 0)
+        message_cluster_data.append({
+            "probability": probability,
+            "avg_message_delay": avg_message_delay,
+            "avg_cluster_delay": avg_cluster_delay
+        })
+
+    output_data = {
+        "message_cluster_data": message_cluster_data,
+        "total_probability": sum(probabilities.values())
+    }
+
     with open(output_file, 'w', encoding='utf-8') as f:
-        f.write("Cluster Length Probabilities, Average Delays, and Average Cluster Delays:\n")
-        for length, probability in sorted(probabilities.items()):
-            avg_delay = calculate_average_delay(delays[length])
-            cluster_avg_delay = cluster_avg_delays.get(length, 0)
-            recalculated_avg_delay.extend(delays[length])
-            f.write(f"Length {length}: {probability:.4f}, Average Delay: {avg_delay:.2f} seconds, "
-                    f"Avg Cluster Delay: {cluster_avg_delay:.2f} seconds\n")
-        f.write(f"\nTotal Sum of Probabilities: {total_sum:.4f}\n")
-        if recalculated_avg_delay:
-            avg_delay_after_redistribution = sum(recalculated_avg_delay) / len(recalculated_avg_delay)
-            f.write(f"Recalculated Average Delay: {avg_delay_after_redistribution:.2f} seconds\n")
+        json.dump(output_data, f, ensure_ascii=False, indent=1)
 
 if __name__ == "__main__":
     raw_files = ["course_2_raw.json", "course_3_raw.json", "course_4_raw.json", "delivery_raw.json"]
+    all_clusters = []
     for raw_file in raw_files:
         raw_data = load_raw_data(os.path.join(RAW_DATA_DIR, raw_file))
         messages = process_messages(raw_data)
         clusters = cluster_messages(messages)
-        save_clusters_to_file(clusters, OUTPUT_CLUSTER_FILE)
-        cluster_probabilities, cluster_delays = calculate_cluster_length_probabilities(clusters)
-        global_avg_delay = calculate_global_average_delay(cluster_delays)
-        assign_custom_zeros(cluster_delays, global_avg_delay)
-        smooth_inconsistent_delays(cluster_delays)
-        cluster_avg_delays = calculate_average_cluster_delay(clusters)
-        
-        global_avg_cluster_delay = sum(cluster_avg_delays.values()) / len([v for v in cluster_avg_delays.values() if v > 0])
-        assign_custom_zeros_cluster(cluster_avg_delays, global_avg_cluster_delay)
-        smooth_inconsistent_cluster_delays(cluster_avg_delays)
+        all_clusters.extend(clusters)
 
-        save_probabilities_to_file(cluster_probabilities, cluster_delays, cluster_avg_delays, global_avg_delay, OUTPUT_PROBABILITY_FILE)
-    print(f"Message clusters saved to {OUTPUT_CLUSTER_FILE}.")
-    print(f"Cluster length probabilities saved to {OUTPUT_PROBABILITY_FILE}.")
+    save_clustered_messages_to_json(all_clusters, OUTPUT_CLUSTERED_MESSAGES_FILE)
+
+    cluster_probabilities, cluster_delays = calculate_cluster_length_probabilities(all_clusters)
+    global_avg_delay = calculate_global_average_delay(cluster_delays)
+    assign_custom_zeros(cluster_delays, global_avg_delay)
+    smooth_inconsistent_delays(cluster_delays)
+    cluster_avg_delays = calculate_average_cluster_delay(all_clusters)
+    
+    global_avg_cluster_delay = sum(cluster_avg_delays.values()) / len([v for v in cluster_avg_delays.values() if v > 0])
+    assign_custom_zeros_cluster(cluster_avg_delays, global_avg_cluster_delay)
+    smooth_inconsistent_cluster_delays(cluster_avg_delays)
+
+    save_probabilities_to_file(cluster_probabilities, cluster_delays, cluster_avg_delays, global_avg_delay, OUTPUT_PROBABILITY_FILE)
+
+    print(f"Clustered data and message cluster probabilities saved to {OUTPUT_DIR}.")
