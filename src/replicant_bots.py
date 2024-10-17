@@ -5,35 +5,34 @@ from collections import deque, defaultdict
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 import random
+import json
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from generate_markov_chain import load_ngrams, build_transition_table, generate_text
+from dotenv import load_dotenv
 
-API_TOKEN = os.getenv('API_TOKEN')
+load_dotenv()
+
+with open('bot_configs.txt', 'r') as file:
+    BOT_CONFIGS = json.load(file)
+
+GROUP_CHAT_ID = -1002311774343
 logging.basicConfig(level=logging.INFO)
-
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
-
-message_history = deque(maxlen=5)
 
 nltk.download('punkt')
 nltk.download('stopwords')
-
 stop_words = set(stopwords.words('english'))
 
-def tokenize_recent_messages_with_weights():
+def tokenize_recent_messages_with_weights(message_history):
     all_keywords = []
     total_messages = len(message_history)
 
     for idx, message in enumerate(reversed(message_history)):
         if message:
             tokens = word_tokenize(message)
-            
             keywords = [word.lower() for word in tokens if word.isalpha() and word.lower() not in stop_words]
             weight = idx + 1
-
             all_keywords.extend(keywords * weight)
 
     return all_keywords
@@ -74,35 +73,58 @@ def generate_text_with_valid_keyword(transition_table, keywords, valid_starting_
 
     return " ".join(generated_words)
 
-async def store_and_print_messages(message: Message):
+async def store_and_print_messages(message, message_history):
     message_history.append(message.text)
 
-    print(f"Last 15 messages in chat {message.chat.id}:")
+    print(f"Last messages in chat {message.chat.id}:")
     for msg in message_history:
         print(msg)
 
-@dp.message()
-async def handle_new_message(message: Message):
-    print(f"New message received in chat {message.chat.id}")
-    
-    await store_and_print_messages(message)
+async def handle_new_message(message: Message, message_history):
+    if message.chat.id == GROUP_CHAT_ID:
+        print(f"New message received in group chat {message.chat.id}")
 
-    keywords = tokenize_recent_messages_with_weights()
-    print(f"Extracted Weighted Keywords: {keywords}")
+        await store_and_print_messages(message, message_history)
 
-    user_id = 'user726029390'
-    ngrams = load_ngrams(user_id, ngram_type="bigrams")
-    
-    valid_starting_keywords = get_valid_starting_keywords(ngrams)
+        keywords = tokenize_recent_messages_with_weights(message_history)
+        print(f"Extracted Weighted Keywords: {keywords}")
 
-    transition_table = build_transition_table(ngrams)
+async def send_periodic_messages(bot: Bot, user_id: str, message_history):
+    while True:
+        ngrams = load_ngrams(user_id, ngram_type="bigrams")
+        valid_starting_keywords = get_valid_starting_keywords(ngrams)
+        transition_table = build_transition_table(ngrams)
 
-    generated_text = generate_text_with_valid_keyword(transition_table, keywords, valid_starting_keywords, max_words=20)
-    
-    await message.answer(generated_text)
+        keywords = tokenize_recent_messages_with_weights(message_history)
+        print(f"Using Keywords for Generation: {keywords}")
+
+        generated_text = generate_text_with_valid_keyword(transition_table, keywords, valid_starting_keywords, max_words=20)
+
+        await bot.send_message(GROUP_CHAT_ID, generated_text)
+
+        delay = random.randint(50, 300)
+        print(f"Delaying for {delay} seconds before sending the next message...")
+        await asyncio.sleep(delay)
+
+async def start_bot(api_token: str, user_id: str):
+    bot = Bot(token=api_token)
+    dp = Dispatcher()
+
+    message_history = deque(maxlen=5)
+
+    @dp.message()
+    async def new_message_handler(message: Message):
+        await handle_new_message(message, message_history)
+
+    asyncio.create_task(send_periodic_messages(bot, user_id, message_history))
+    await dp.start_polling(bot)
 
 async def main():
-    await dp.start_polling(bot)
+    tasks = []
+    for config in BOT_CONFIGS:
+        tasks.append(start_bot(config['api_token'], config['user_id']))
+
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

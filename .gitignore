@@ -5,3 +5,5 @@ message_length_matrix.txt
 user_id_patterns.txt
 .env
 user_id_patterns.txt
+bot_configs.txt
+src/__pycache__/generate_markov_chain.cpython-313.pyc
