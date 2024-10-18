@@ -11,3 +11,6 @@ message_clusters_output.txt
 cluster_length_probabilities.txt
 time_preferences_output.txt
 transition_table_output.txt
+src/__pycache__/generate_markov_chain.cpython-313.pyc
+src/__pycache__/generate_message.cpython-313.pyc
+src/__pycache__/initialize_cluster.cpython-313.pyc
