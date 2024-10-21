@@ -4,7 +4,7 @@ from collections import defaultdict
 
 CLUSTERED_MESSAGES_FILE = "data/clustered_messages.json"
 OUTPUT_STARTER_PROBABILITIES_FILE = "data/starter_message_probabilities.json"
-BOT_CONFIGS_FILE = "bot_configs.txt"
+BOT_CONFIGS_FILE = "bot_configs.json"
 
 def load_clustered_messages(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:

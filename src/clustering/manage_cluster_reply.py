@@ -4,7 +4,7 @@ from collections import defaultdict
 
 CLUSTERED_MESSAGES_FILE = "data/clustered_messages.json"
 OUTPUT_PARTICIPATION_FILE = "data/cluster_reply_participation.json"
-BOT_CONFIGS_FILE = "bot_configs.txt"
+BOT_CONFIGS_FILE = "bot_configs.json"
 
 def load_clustered_messages(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -15,7 +15,6 @@ def load_bot_configs(file_path):
         return json.load(f)
 
 def get_clusters_started_by_user(clusters, user_id):
-    """Get all clusters started by a specific user (user_n)."""
     user_clusters = []
     for cluster in clusters:
         first_message = cluster['messages'][0]
@@ -24,7 +23,6 @@ def get_clusters_started_by_user(clusters, user_id):
     return user_clusters
 
 def calculate_participation_rate(clusters, allowed_users):
-    """Calculate the participation rate of all allowed users (user_k) in the clusters started by user_n."""
     total_message_count = defaultdict(int)
     user_names = {}
 
@@ -47,7 +45,6 @@ def calculate_participation_rate(clusters, allowed_users):
     return participation_rates, user_names
 
 def generate_participation_data(clusters, allowed_users):
-    """Generate the participation data for each user n."""
     participation_data = {}
 
     for user_n in allowed_users:
@@ -69,7 +66,6 @@ def generate_participation_data(clusters, allowed_users):
     return participation_data
 
 def save_participation_data_to_json(participation_data, output_file):
-    """Save participation data to a JSON file."""
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(participation_data, f, ensure_ascii=False, indent=1)
 

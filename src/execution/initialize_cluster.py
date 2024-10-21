@@ -1,7 +1,7 @@
 import json
 import random
 import time
-from generate_message import generate_message_for_users
+from generate_message import generate_starter_message, generate_reply_message
 
 CLUSTER_DATA_FILE = "data/cluster_data.json"
 STARTER_PROB_FILE = "data/starter_message_probabilities.json"
@@ -17,7 +17,7 @@ def initialize_cluster():
     
     probabilities = [cluster['probability'] for cluster in cluster_data]
     selected_cluster = random.choices(cluster_data, weights=probabilities, k=1)[0]
-    selected_cluster["length"] = random.randint(1, 50)
+    selected_cluster["length"] = random.randint(1, 50)  # Random cluster length
     
     user_probabilities = [user['probability'] for user in starter_data]
     starter_user = random.choices(starter_data, weights=user_probabilities, k=1)[0]
@@ -26,10 +26,6 @@ def initialize_cluster():
         "cluster": selected_cluster,
         "starter_user": starter_user
     }
-
-def generate_starter_message(starter_user):
-    user_n = starter_user["user_id"]
-    return generate_message_for_users(user_n, user_n)
 
 def choose_next_user(starter_user, participation_data):
     participation_rates = participation_data[starter_user]["participation_rates"]
@@ -41,12 +37,13 @@ def choose_next_user(starter_user, participation_data):
 
 def simulate_replies_one_by_one(cluster_info, participation_data):
     starter_user = cluster_info['starter_user']
-    starter_message = generate_starter_message(starter_user)
+    starter_message = generate_starter_message(starter_user["user_id"])
     
     yield {
         "from": starter_user['user_id'],
         "message": starter_message
     }
+    
     cluster = cluster_info['cluster']
     cluster_length = cluster["length"]
     avg_message_delay = cluster["avg_message_delay"]
@@ -54,8 +51,8 @@ def simulate_replies_one_by_one(cluster_info, participation_data):
     current_user = choose_next_user(starter_user['user_id'], participation_data)
     
     for i in range(cluster_length - 1):
-        next_user = choose_next_user(starter_user['user_id'], participation_data)
-        reply_message = generate_message_for_users(current_user, next_user)
+        next_user = choose_next_user(current_user, participation_data)
+        reply_message = generate_reply_message(current_user, next_user)
         time.sleep(avg_message_delay / 5)
         
         yield {

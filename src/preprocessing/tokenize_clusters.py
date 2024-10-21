@@ -15,7 +15,7 @@ punctuation = set(string.punctuation)
 CLUSTERED_MESSAGES_FILE = "data/clustered_messages.json"
 TOKENIZED_DIR = "data/tokenized"
 COMBINED_OUTPUT_FILE = "data/tokenized/combined_tokenized.json"
-BOT_CONFIGS_FILE = "bot_configs.txt"
+BOT_CONFIGS_FILE = "bot_configs.json"
 
 if not os.path.exists(TOKENIZED_DIR):
     os.makedirs(TOKENIZED_DIR)
@@ -76,7 +76,7 @@ def merge_json_files(output_file):
             file_path = os.path.join(TOKENIZED_DIR, file_name)
             with open(file_path, 'r', encoding='utf-8') as f:
                 user_data = json.load(f)
-                combined_data.update(user_data)  # Add each user's data to combined_data
+                combined_data.update(user_data)
     
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(combined_data, f, ensure_ascii=False, indent=1)
