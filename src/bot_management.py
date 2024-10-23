@@ -5,7 +5,7 @@ from aiogram import Bot
 from initialize_cluster import simulate_cluster_conversation
 
 
-with open('bot_configs.json', 'r') as file:
+with open('data/configs/config.json', 'r') as file:
     BOT_CONFIGS = json.load(file)
 
 GROUP_CHAT_ID = -1002311774343

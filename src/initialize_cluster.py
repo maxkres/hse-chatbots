@@ -1,7 +1,8 @@
 import json
 import random
 import time
-from generate_message import generate_starter_message, generate_reply_message
+from generate_message import generate_message
+from build_ngrams import run_ngrams_with_similarity
 
 CLUSTER_DATA_FILE = "data/cluster_data.json"
 STARTER_PROB_FILE = "data/starter_message_probabilities.json"
@@ -17,7 +18,7 @@ def initialize_cluster():
     
     probabilities = [cluster['probability'] for cluster in cluster_data]
     selected_cluster = random.choices(cluster_data, weights=probabilities, k=1)[0]
-    selected_cluster["length"] = random.randint(1, 50)  # Random cluster length
+    selected_cluster["length"] = random.randint(1, 50)
     
     user_probabilities = [user['probability'] for user in starter_data]
     starter_user = random.choices(starter_data, weights=user_probabilities, k=1)[0]
@@ -37,7 +38,8 @@ def choose_next_user(starter_user, participation_data):
 
 def simulate_replies_one_by_one(cluster_info, participation_data):
     starter_user = cluster_info['starter_user']
-    starter_message = generate_starter_message(starter_user["user_id"])
+    print(f"Starter User: {starter_user}")
+    starter_message, lemmatized_message = generate_message(starter_user["user_id"], mode="starter")
     
     yield {
         "from": starter_user['user_id'],
@@ -52,8 +54,10 @@ def simulate_replies_one_by_one(cluster_info, participation_data):
     
     for i in range(cluster_length - 1):
         next_user = choose_next_user(current_user, participation_data)
-        reply_message = generate_reply_message(current_user, next_user)
-        time.sleep(avg_message_delay / 5)
+        print(next_user)
+        run_ngrams_with_similarity(lemmatized_message, next_user)
+        reply_message, lemmatized_message = generate_message(next_user, mode="reply")
+        time.sleep(avg_message_delay / 10)
         
         yield {
             "from": current_user,
@@ -71,4 +75,4 @@ def simulate_cluster_conversation():
         for reply in reply_generator:
             yield reply
         
-        time.sleep(cluster_delay / 10)
+        time.sleep(cluster_delay / 100)
