@@ -7,11 +7,9 @@ import pymorphy3
 from nltk.corpus import stopwords
 import nltk
 
-# Ensure required resources are downloaded for NLTK
 nltk.download('punkt')
 nltk.download('stopwords')
 
-# Initialize pymorphy3 and stopwords for Russian
 morph = pymorphy3.MorphAnalyzer()
 stop_words = set(stopwords.words('russian'))
 stop_words.add('это')

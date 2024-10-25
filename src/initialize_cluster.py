@@ -3,6 +3,7 @@ import random
 import time
 from generate_message import generate_message
 from build_ngrams import run_ngrams_with_similarity
+from similar_messages import process_similarity
 
 CLUSTER_DATA_FILE = "data/cluster_data.json"
 STARTER_PROB_FILE = "data/starter_message_probabilities.json"
@@ -54,25 +55,39 @@ def simulate_replies_one_by_one(cluster_info, participation_data):
     
     for i in range(cluster_length - 1):
         next_user = choose_next_user(current_user, participation_data)
-        print(next_user)
+        print(f"Next User: {next_user}")
         run_ngrams_with_similarity(lemmatized_message, next_user)
+        
         reply_message, lemmatized_message = generate_message(next_user, mode="reply")
-        time.sleep(avg_message_delay / 10)
+
+        time.sleep(avg_message_delay / 50)
         
         yield {
-            "from": current_user,
+            "from": next_user,
             "message": reply_message
         }
-        current_user = next_user
 
 def simulate_cluster_conversation():
     while True:
         cluster_info = initialize_cluster()
         participation_data = load_json(CLUSTER_REPLY_FILE)
         cluster_delay = cluster_info['cluster']['avg_cluster_delay']
-        reply_generator = simulate_replies_one_by_one(cluster_info, participation_data)
+        print(cluster_info)
         
+        reply_generator = simulate_replies_one_by_one(cluster_info, participation_data)
+
         for reply in reply_generator:
             yield reply
-        
+        '''
+        for reply in reply_generator:
+            print(f"User {reply['from']} says: {reply['message']}")
+        '''
         time.sleep(cluster_delay / 100)
+
+'''
+def main():
+    simulate_cluster_conversation()
+
+if __name__ == "__main__":
+    main()
+'''
